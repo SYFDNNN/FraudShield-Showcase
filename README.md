@@ -18,6 +18,7 @@ FraudShield adalah proyek portofolio end-to-end machine learning yang memperkira
 - [Menjalankan workflow ML](#menjalankan-workflow-ml)
 - [Inference API](#inference-api)
 - [Web UI](#web-ui)
+- [Demo visual](#demo-visual)
 - [Pengujian](#pengujian)
 - [Struktur proyek](#struktur-proyek)
 - [Batas penggunaan](#batas-penggunaan)
@@ -304,6 +305,16 @@ Workspace Flask terdiri dari:
 - **Model & System** — identitas model, field wajib dan terlarang, missing semantics, serta contoh API request.
 
 Sembilan belas sinyal yang biasanya berasal dari sistem bank dibuat read-only secara default. Pengubahan hanya tersedia melalui mode eksperimen untuk kebutuhan demo.
+
+### Demo visual
+
+Screenshot overview:
+
+![FraudShield overview](docs/media/fraudshield-overview.png)
+
+Video demo:
+
+[Download video demo FraudShield](docs/media/fraudshield-demo.mp4)
 
 ### Docker Compose
 
