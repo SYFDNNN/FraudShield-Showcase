@@ -1,88 +1,32 @@
-# Arsitektur FraudShield
+# Arsitektur Konseptual
 
-Arsitektur sampai Fase 8 memisahkan development, calibration, selection, final
-evaluation, serving, dan explainability berdasarkan waktu serta trust boundary.
-
-```mermaid
-flowchart TD
-    A["Dataset Base"] --> B["Validasi dan temporal split"]
-    B --> C["Train model: month 0–4"]
-    C --> D["Fit calibrator: month 5"]
-    D --> E["Selection: month 6"]
-    E --> F["Final test: month 7"]
-    F --> G["Artifact gate"]
-    G --> H["Inference API"]
-    H --> I["TreeSHAP dan reason codes"]
-```
-
-Aturan utama arsitektur adalah satu pipeline preprocessing yang sama untuk
-training, evaluasi, dan inference. Preprocessing berada di dalam artifact model
-dan tidak di-fit ulang setelah model dasar dikunci.
-
-## Batas keputusan temporal
-
-| Komponen | Periode yang boleh digunakan |
-| --- | --- |
-| Preprocessing dan model dasar | Month 0–4 |
-| Fitting calibrator | Month 5 |
-| Model, calibrator, threshold, dan risk-band selection | Month 6 |
-| Pelaporan final satu kali | Month 7 |
-
-## Freeze dan final evaluation
-
-Sebelum month 7 dibuka, workflow Fase 6 memverifikasi artifact Fase 5 dan
-menulis `freeze_manifest.json`. Manifest mencatat hash model serta seluruh
-kebijakan evaluasi. Completion artifact ditulis terakhir setelah semua hasil
-berhasil disimpan.
-
-Run berikutnya memverifikasi hash hasil dan menggunakan output tersimpan tanpa
-membaca test kembali. Perubahan setelah hasil test terlihat harus diperlakukan
-sebagai generasi model baru yang memerlukan test periode masa depan, bukan
-pengulangan evaluasi month 7.
-
-State yang menunjukkan test pernah dibuka tetapi hasil belum lengkap memblokir
-retry otomatis. Satu-satunya recovery otomatis adalah menulis ulang completion
-marker dari satu set hasil lengkap yang hash-nya sudah direkam; recovery ini
-tidak membaca dataset.
-
-## Batas penggunaan
-
-- Score hanya untuk prioritas review manual.
-- Exact-capacity policy mengontrol beban antrean; fixed threshold mengukur
-  transfer cutoff validation ke test.
-- Risk band bukan bukti fraud.
-- Tidak ada automated rejection.
-- Reporting alert tidak menjalankan tuning otomatis.
-
-## Serving dan explainability Fase 7–8
+FraudShield memisahkan lifecycle data science, evaluasi, dan decision support
+agar hasil model dapat dibaca dalam konteks operasional tanpa menjadikan model
+sebagai pengambil keputusan otomatis.
 
 ```mermaid
 flowchart TD
-    A["Flask UI atau external client"] --> B["Strict FastAPI schema"]
-    B --> C["Artifact-locked runtime"]
-    C --> D["Calibrated model pipeline"]
-    D --> E["Native XGBoost TreeSHAP"]
-    C --> F["Aggregate telemetry"]
+    A["Dataset sintetis"] --> B["Temporal split"]
+    B --> C["Model scoring"]
+    C --> D["Probability calibration"]
+    D --> E["Risk prioritization"]
+    E --> F["Review queue"]
+    F --> G["Human analyst"]
+    C --> H["Serving layer"]
+    H --> E
 ```
 
-FastAPI adalah satu-satunya komponen yang memuat artifact model. Flask UI
-menjadi HTTP client dan tidak memiliki akses ke raw dataset, label, atau
-model. Runtime memverifikasi hash model dan bukti evaluasi final sebelum
-readiness berhasil.
+## Prinsip desain
 
-Single request menghasilkan probability dan fixed-threshold signal tanpa
-exact-capacity claim. Batch request harus merepresentasikan seluruh decision
-window; runtime kemudian memberi ranking deterministik dan tepat
-`ceil(rows × 5%)` review flags.
+- Data sintetis digunakan untuk mendemonstrasikan workflow tanpa membuka data
+  nasabah.
+- Temporal split membantu menguji generalisasi ke periode yang lebih baru.
+- Probability calibration membuat skor lebih berguna untuk prioritisasi.
+- Kapasitas review 5% menghubungkan hasil model dengan batas operasional.
+- TreeSHAP digunakan untuk membantu analyst memahami sinyal lokal model.
+- Keputusan akhir tetap berada pada analyst manusia.
+- Tidak ada automated rejection atau automated approval.
 
-TreeSHAP menjelaskan raw margin XGBoost dari model dasar yang sama dan tidak
-melakukan fitting. Kontribusi fitur hasil preprocessing digabung kembali ke
-field mentah, dipilih maksimum lima alasan lokal, lalu dikirim bersama tindakan
-analyst yang tidak pernah berupa penolakan otomatis. Kalibrator sigmoid tetap
-menentukan probabilitas publik; SHAP tidak diklaim sebagai dekomposisi langsung
-dari probabilitas yang sudah dikalibrasi.
-
-Artifact model di-mount read-only pada container. Image berjalan sebagai user
-non-root. TLS, authentication, rate limiting, durable audit storage, dan
-central monitoring berada pada API gateway/platform boundary dan belum
-diimplementasikan oleh demo lokal.
+FastAPI dan Flask ditampilkan sebagai konsep stack aplikasi. Deployment nyata
+memerlukan authentication, authorization, TLS, audit trail, monitoring drift,
+load testing, dan security review.
