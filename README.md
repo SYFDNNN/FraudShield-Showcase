@@ -60,7 +60,7 @@ implementasi internal.
 
 - [Arsitektur konseptual](docs/architecture.md)
 - [Gambar overview](docs/images/overview.png)
-- [Video demo](demo/fraudshield-demo.mp4)
+- [Video demo di Google Drive](https://drive.google.com/drive/folders/1UZfI-bZcY7KC-1fUp6kZpV59yzpMNtiE?usp=drive_link)
 - [Demo notes](demo/README.md)
 
 ## Batas ruang lingkup showcase
